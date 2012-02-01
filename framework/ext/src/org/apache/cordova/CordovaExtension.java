@@ -113,12 +113,11 @@ public final class CordovaExtension implements WidgetExtension {
             // if this is premature, we at least set the _nativeReady flag to true
             // so that when the JS side is ready, it knows native side is too
             Logger.log(this.getClass().getName() + ": invoking Cordova.onNativeReady.fire()");
-            scriptEngine.executeScript("try {Cordova.onNativeReady.fire();} catch(e) {_nativeReady = true;}", null);
+            scriptEngine.executeScript("try {require('phonegap/channel').onNativeReady.fire();} catch(e) {_nativeReady = true;}", null);
         }
     }
 
     // Called so that the extension can get a reference to the configuration or browser field object
-    //
     public void register(WidgetConfig widgetConfig, BrowserField browserField) {
         browser = new WeakReference(browserField);
 
