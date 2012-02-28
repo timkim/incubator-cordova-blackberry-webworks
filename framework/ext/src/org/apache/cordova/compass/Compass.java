@@ -25,46 +25,45 @@ import org.apache.cordova.json4j.JSONException;
 import org.apache.cordova.json4j.JSONObject;
 import org.apache.cordova.util.Logger;
 
-/*
-import net.rim.device.api.system.AccelerometerData;
-import net.rim.device.api.system.AccelerometerListener;
-import net.rim.device.api.system.AccelerometerSensor;
+import net.rim.device.api.system.MagnetometerData;
+import net.rim.device.api.system.MagnetometerListener;
+import net.rim.device.api.system.MagnetometerSensor;
+import net.rim.device.api.system.MagnetometerChannelConfig;
+import net.rim.device.api.system.MagnetometerCalibrationException
 import net.rim.device.api.system.Application;
 
-public class Accelerometer extends Plugin implements AccelerometerListener {
-
-	public static final String ACTION_GET_ACCELERATION = "getAcceleration";
-	public static final String ACTION_SET_TIMEOUT = "setTimeout";
-	public static final String ACTION_GET_TIMEOUT = "getTimeout";
-	public static final String ACTION_STOP = "stop";
-
-	public static int STOPPED = 0;
-	public static int STARTED = 1;
-
-	private static AccelerometerSensor.Channel _rawDataChannel = null; // the single channel to the device sensor
-	int status;                                                        // status of this listener
-    public float timeout = 30000;                                      // timeout in msec to close sensor channel
-    long lastAccessTime;                                               // last time accel data was retrieved
-
-	public PluginResult execute(String action, JSONArray args, String calbackId) {
-
+public class Compass extends Plugin implements MagnetometerListener{
+    public static final String ACTION_GET_HEADING = "getHeading";
+    public static final String ACTION_SET_TIMEOUT = "setTimeout";
+    public static final String ACTION_GET_TIMEOUT = "getTimeout";
+    public static final String ACTION_STOP = "stop";
+    
+    public static int STOPPED = 0;
+    public static int STARTED = 1;
+    
+    private static MagnetometerSensor.Channel _rawDataChannel = null;
+    int status;
+    public float timeout = 30000;
+    long lastAccessTime;
+    
+    public PluginResult execute(String action, JSONArray args, String calbackId){
+    
 		PluginResult result = null;
-
-		if (!AccelerometerSensor.isSupported()) {
-			result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION, "Accelerometer sensor not supported");
+		if (!MagnetometerSensor.isSupported()) {
+			result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION, "Magnetometer sensor not supported");
 		}
-		else if (ACTION_GET_ACCELERATION.equals(action)) {
-			JSONObject accel = new JSONObject();
+		else if (ACTION_GET_HEADING.equals(action)) {
+			JSONObject heading = new JSONObject();
 			try {
-				AccelerometerData accelData = getCurrentAcceleration();
-				accel.put("x", (int)accelData.getLastXAcceleration());
-				accel.put("y", (int)accelData.getLastYAcceleration());
-				accel.put("z", (int)accelData.getLastZAcceleration());
-				accel.put("timestamp", accelData.getLastTimestamp());
+				MagnetometerData headingData = getCurrentHeading();
+				heading.put("magneticHeading", (float)headingData.getHeading());
+				heading.put("trueHeading", (float)headingData.getHeading());
+				heading.put("headingAccuracy", (int)0);
+				heading.put("timestamp", headingData.getLastTimestamp());
 			} catch (JSONException e) {
 				return new PluginResult(PluginResult.Status.JSON_EXCEPTION, "JSONException:" + e.getMessage());
 			}
-			result = new PluginResult(PluginResult.Status.OK, accel);
+			result = new PluginResult(PluginResult.Status.OK, heading);
 		}
 		else if (ACTION_GET_TIMEOUT.equals(action)) {
 			float f = this.getTimeout();
@@ -86,137 +85,138 @@ public class Accelerometer extends Plugin implements AccelerometerListener {
 			return new PluginResult(PluginResult.Status.OK, "");
 		}
 		else {
-			result = new PluginResult(PluginResult.Status.INVALID_ACTION, "Accelerometer: Invalid action:" + action);
+			result = new PluginResult(PluginResult.Status.INVALID_ACTION, "Magnetometer: Invalid action:" + action);
 		}
 
-		return result;
-	}
-*/
+		return result;    
+    }
+    
+
 	/**
 	 * Identifies if action to be executed returns a value and should be run synchronously.
 	 *
 	 * @param action	The action to execute
 	 * @return			T=returns value
 	 */
-/*
+
 	public boolean isSynch(String action) {
 		return true;
 	}
-*/
+
     /**
-     * Get status of accelerometer sensor.
+     * Get status of magnetometer sensor.
      *
      * @return			status
      */
-/*     
+   
 	public int getStatus() {
 		return this.status;
 	}
-*/
+
 	/**
 	 * Set the status and send it to JavaScript.
 	 * @param status
 	 */
-/*
+
 	private void setStatus(int status) {
 		this.status = status;
 	}
-*/
+
 	/**
-	 * Set the timeout to turn off accelerometer sensor.
+	 * Set the timeout to turn off magnetometer sensor.
 	 *
 	 * @param timeout		Timeout in msec.
 	 */
-/*
+
 	public void setTimeout(float timeout) {
 		this.timeout = timeout;
 	}
-*/
+
 	/**
-	 * Get the timeout to turn off accelerometer sensor.
+	 * Get the timeout to turn off magnetometer sensor.
 	 *
 	 * @return timeout in msec
 	 */
-/*     
+   
 	public float getTimeout() {
 		return this.timeout;
 	}
-*/
+
 	/**
-	 * Opens a raw data channel to the accelerometer sensor.
-	 * @return the AccelerometerSensor.Channel for the application
+	 * Opens a raw data channel to the magnetometer sensor.
+	 * @return the MagnetometerSensor.Channel for the application
 	 */
-/*     
-	private static AccelerometerSensor.Channel getChannel() {
+     
+	private static MagnetometerSensor.Channel getChannel() {
 		// an application can only have one open channel
 		if (_rawDataChannel == null || !_rawDataChannel.isOpen()) {
-			_rawDataChannel = AccelerometerSensor.openRawDataChannel(
+			_rawDataChannel = MagnetometerSensor.openRawDataChannel(
 				Application.getApplication());
-			Logger.log(Accelerometer.class.getName() +": sensor channel opened");
+			Logger.log(Magnetometer.class.getName() +": sensor channel opened");
 		}
 		return _rawDataChannel;
 	}
-*/
+
 	/**
-	 * Returns last acceleration data from the accelerometer sensor.
-	 * @return AccelerometerData with last acceleration data
+	 * Returns last heading data from the magnetometer sensor.
+	 * @return MagnetometerData with last heading data
 	 */
-/*
-	private AccelerometerData getCurrentAcceleration() {
+
+	private MagnetometerData getCurrentHeading() {
 		// open sensor channel
 		if (this.getStatus() != STARTED) {
 			this.start();
 		}
 
-		// get the last acceleration
-		AccelerometerData accelData = getChannel().getAccelerometerData();
+		// get the last heading
+		MagnetometerData headingData = getChannel().getMagnetometerData();
 
         Logger.log(this.getClass().getName() +
-                ": x=" + accelData.getLastXAcceleration() +
-                ", y=" + accelData.getLastYAcceleration() +
-                ", z=" + accelData.getLastZAcceleration() +
-                ", timestamp=" + accelData.getLastTimestamp());
+                ": magneticHeading=" + headingData.getHeading() +
+                ", trueHeading=" + headingData.getHeading() +
+                ", headingAccuracy=" + "0" +
+                ", timestamp=" + headingData.getLastTimestamp());
 
 		// remember the access time (for timeout purposes)
         this.lastAccessTime = System.currentTimeMillis();
 
-		return accelData;
+		return headingData;
 	}
-*/
+
 	/**
-	 * Implements the AccelerometerListener method.  We listen for the purpose
-	 * of closing the application's accelerometer sensor channel after timeout
+	 * Implements the MagnetometerListener method.  We listen for the purpose
+	 * of closing the application's Magnetometer sensor channel after timeout
 	 * has been exceeded.
 	 */
-/*     
-	public void onData(AccelerometerData accelData) {
+    
+	public void onData(MagnetometerData headingData) {
         // time that accel event was received
-        long timestamp = accelData.getLastTimestamp();
+        long timestamp = headingData.getLastTimestamp();
 
         // If values haven't been read for length of timeout,
-        // turn off accelerometer sensor to save power
+        // turn off magnetometer sensor to save power
 		if ((timestamp - this.lastAccessTime) > this.timeout) {
 			this.stop();
 		}
 	}
-*/
+
 	/**
 	 * Adds this listener to sensor channel.
 	 */
-/*     
+     
 	public void start() {
 		// open the sensor channel and register listener
-		getChannel().setAccelerometerListener(this);
+		getChannel().setMagnetometerListener(this);
 
 		Logger.log(this.getClass().getName() +": sensor listener added");
 
 		this.setStatus(STARTED);
 	}
-*/
+
     /**
-     * Stops accelerometer listener and closes the sensor channel.
+     * Stops magnetometer listener and closes the sensor channel.
      */
-/*     
+    
     public void stop() {
         // close the sensor channel
         if (_rawDataChannel != null && _rawDataChannel.isOpen()) {
@@ -226,13 +226,13 @@ public class Accelerometer extends Plugin implements AccelerometerListener {
 
         this.setStatus(STOPPED);
     }
-*/
+
     /**
      * Called when Plugin is destroyed.
      */
-/*     
+     
     public void onDestroy() {
         this.stop();
     }
 }
-*/
+
