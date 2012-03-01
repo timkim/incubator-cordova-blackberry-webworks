@@ -28,8 +28,7 @@ import org.apache.cordova.util.Logger;
 import net.rim.device.api.system.MagnetometerData;
 import net.rim.device.api.system.MagnetometerListener;
 import net.rim.device.api.system.MagnetometerSensor;
-import net.rim.device.api.system.MagnetometerChannelConfig;
-import net.rim.device.api.system.MagnetometerCalibrationException
+import net.rim.device.api.system.MagnetometerSensor.Channel;
 import net.rim.device.api.system.Application;
 
 public class Compass extends Plugin implements MagnetometerListener{
@@ -41,7 +40,8 @@ public class Compass extends Plugin implements MagnetometerListener{
     public static int STOPPED = 0;
     public static int STARTED = 1;
     
-    private static MagnetometerSensor.Channel _rawDataChannel = null;
+    private Channel magChannel;
+    float currentHeading = 0;
     int status;
     public float timeout = 30000;
     long lastAccessTime;
@@ -55,11 +55,12 @@ public class Compass extends Plugin implements MagnetometerListener{
 		else if (ACTION_GET_HEADING.equals(action)) {
 			JSONObject heading = new JSONObject();
 			try {
-				MagnetometerData headingData = getCurrentHeading();
-				heading.put("magneticHeading", (float)headingData.getHeading());
-				heading.put("trueHeading", (float)headingData.getHeading());
-				heading.put("headingAccuracy", (int)0);
-				heading.put("timestamp", headingData.getLastTimestamp());
+                this.registerMagChannel();
+                
+				heading.put("magneticHeading", currentHeading);
+				heading.put("trueHeading", currentHeading);
+				heading.put("headingAccuracy", 0);
+				heading.put("timestamp", 0);
 			} catch (JSONException e) {
 				return new PluginResult(PluginResult.Status.JSON_EXCEPTION, "JSONException:" + e.getMessage());
 			}
@@ -81,7 +82,7 @@ public class Compass extends Plugin implements MagnetometerListener{
 			}
 		}
 		else if (ACTION_STOP.equals(action)) {
-			this.stop();
+			this.unRegisterMagChannel();
 			return new PluginResult(PluginResult.Status.OK, "");
 		}
 		else {
@@ -146,41 +147,10 @@ public class Compass extends Plugin implements MagnetometerListener{
 	 * Opens a raw data channel to the magnetometer sensor.
 	 * @return the MagnetometerSensor.Channel for the application
 	 */
-     
-	private static MagnetometerSensor.Channel getChannel() {
-		// an application can only have one open channel
-		if (_rawDataChannel == null || !_rawDataChannel.isOpen()) {
-			_rawDataChannel = MagnetometerSensor.openRawDataChannel(
-				Application.getApplication());
-			Logger.log(Magnetometer.class.getName() +": sensor channel opened");
-		}
-		return _rawDataChannel;
-	}
-
-	/**
-	 * Returns last heading data from the magnetometer sensor.
-	 * @return MagnetometerData with last heading data
-	 */
-
-	private MagnetometerData getCurrentHeading() {
-		// open sensor channel
-		if (this.getStatus() != STARTED) {
-			this.start();
-		}
-
-		// get the last heading
-		MagnetometerData headingData = getChannel().getMagnetometerData();
-
-        Logger.log(this.getClass().getName() +
-                ": magneticHeading=" + headingData.getHeading() +
-                ", trueHeading=" + headingData.getHeading() +
-                ", headingAccuracy=" + "0" +
-                ", timestamp=" + headingData.getLastTimestamp());
-
-		// remember the access time (for timeout purposes)
-        this.lastAccessTime = System.currentTimeMillis();
-
-		return headingData;
+	private void registerMagChannel() {
+        // open channel
+        magChannel = MagnetometerSensor.openChannel( Application.getApplication() );
+        magChannel.addMagnetometerListener( this );
 	}
 
 	/**
@@ -189,50 +159,29 @@ public class Compass extends Plugin implements MagnetometerListener{
 	 * has been exceeded.
 	 */
     
-	public void onData(MagnetometerData headingData) {
-        // time that accel event was received
-        long timestamp = headingData.getLastTimestamp();
+	public void onData(MagnetometerData magData) {
+        // get the new orientation
+        float direction = magData.getHeading(0);
+        long timestamp = magData.getTimestamp();
+        
+        currentHeading = direction;
 
         // If values haven't been read for length of timeout,
         // turn off magnetometer sensor to save power
 		if ((timestamp - this.lastAccessTime) > this.timeout) {
-			this.stop();
+			magChannel.close();
 		}
 	}
-
-	/**
-	 * Adds this listener to sensor channel.
-	 */
-     
-	public void start() {
-		// open the sensor channel and register listener
-		getChannel().setMagnetometerListener(this);
-
-		Logger.log(this.getClass().getName() +": sensor listener added");
-
-		this.setStatus(STARTED);
-	}
-
-    /**
-     * Stops magnetometer listener and closes the sensor channel.
-     */
     
-    public void stop() {
-        // close the sensor channel
-        if (_rawDataChannel != null && _rawDataChannel.isOpen()) {
-            _rawDataChannel.close();
-            Logger.log(this.getClass().getName() +": sensor channel closed");
-        }
-
-        this.setStatus(STOPPED);
+    public void unRegisterMagChannel(){
+        magChannel.close();
     }
-
     /**
      * Called when Plugin is destroyed.
      */
      
     public void onDestroy() {
-        this.stop();
+        magChannel.close();
     }
 }
 
