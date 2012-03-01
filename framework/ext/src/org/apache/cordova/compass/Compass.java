@@ -42,7 +42,6 @@ public class Compass extends Plugin implements MagnetometerListener{
     public static int STARTED = 1;
     
     private Channel magChannel;
-    float currentHeading = 0;
     int status;
     public float timeout = 30000;
     long lastAccessTime;
@@ -144,6 +143,11 @@ public class Compass extends Plugin implements MagnetometerListener{
 		return this.timeout;
 	}
     
+    /**
+	 * Get the latest data from the Magnetometer sensor
+	 *
+	 * @return the MagnetometerData 
+	 */
     private MagnetometerData getCurrentHeading(){
 		// open sensor channel
 		if (this.getStatus() != STARTED) {
@@ -151,12 +155,12 @@ public class Compass extends Plugin implements MagnetometerListener{
 		}
 
 		// get the last acceleration
-		MagnetometerData headingData = magChannel.getData();
+		MagnetometerData data = magChannel.getData();
 
 		// remember the access time (for timeout purposes)
         this.lastAccessTime = System.currentTimeMillis();
 
-		return headingData;
+		return data;
     }
 	/**
 	 * Implements the MagnetometerListener method.  We listen for the purpose
@@ -175,7 +179,7 @@ public class Compass extends Plugin implements MagnetometerListener{
 	}
     
     /**
-	 * Adds this listener to sensor channel.
+	 * Starts the Magnetometer channel to get data. Set to background mode to get the raw data
 	 */
 	public void start() {
         MagnetometerChannelConfig channelConfig = new MagnetometerChannelConfig();
@@ -189,7 +193,7 @@ public class Compass extends Plugin implements MagnetometerListener{
 	}
 
     /**
-     * Stops accelerometer listener and closes the sensor channel.
+     * Stops magnetometer listener and closes the sensor channel.
      */
     public void stop() {
         // close the sensor channel
