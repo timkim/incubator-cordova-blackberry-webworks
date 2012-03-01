@@ -29,6 +29,7 @@ import net.rim.device.api.system.MagnetometerData;
 import net.rim.device.api.system.MagnetometerListener;
 import net.rim.device.api.system.MagnetometerSensor;
 import net.rim.device.api.system.MagnetometerSensor.Channel;
+import net.rim.device.api.system.MagnetometerChannelConfig;
 import net.rim.device.api.system.Application;
 
 public class Compass extends Plugin implements MagnetometerListener{
@@ -55,13 +56,12 @@ public class Compass extends Plugin implements MagnetometerListener{
 		else if (ACTION_GET_HEADING.equals(action)) {
 			JSONObject heading = new JSONObject();
 			try {
-                this.registerMagChannel();
-                MagnetometerData data = magChannel.getData();
+                MagnetometerData data = getCurrentHeading();
                 
-				heading.put("magneticHeading", currentHeading);
-				heading.put("trueHeading", currentHeading);
+				heading.put("magneticHeading", data.getDirectionFront());
+				heading.put("trueHeading", data.getDirectionFront());
 				heading.put("headingAccuracy", 0);
-				heading.put("timestamp", 0);
+				heading.put("timestamp", data.getTimestamp());
 			} catch (JSONException e) {
 				return new PluginResult(PluginResult.Status.JSON_EXCEPTION, "JSONException:" + e.getMessage());
 			}
@@ -83,7 +83,7 @@ public class Compass extends Plugin implements MagnetometerListener{
 			}
 		}
 		else if (ACTION_STOP.equals(action)) {
-			this.unRegisterMagChannel();
+			this.stop();
 			return new PluginResult(PluginResult.Status.OK, "");
 		}
 		else {
@@ -143,17 +143,21 @@ public class Compass extends Plugin implements MagnetometerListener{
 	public float getTimeout() {
 		return this.timeout;
 	}
+    
+    private MagnetometerData getCurrentHeading(){
+		// open sensor channel
+		if (this.getStatus() != STARTED) {
+			this.start();
+		}
 
-	/**
-	 * Opens a raw data channel to the magnetometer sensor.
-	 * @return the MagnetometerSensor.Channel for the application
-	 */
-	private void registerMagChannel() {
-        // open channel
-        magChannel = MagnetometerSensor.openChannel(Application.getApplication());
-        magChannel.addMagnetometerListener(this);
-	}
+		// get the last acceleration
+		MagnetometerData headingData = magChannel.getData();
 
+		// remember the access time (for timeout purposes)
+        this.lastAccessTime = System.currentTimeMillis();
+
+		return headingData;
+    }
 	/**
 	 * Implements the MagnetometerListener method.  We listen for the purpose
 	 * of closing the application's Magnetometer sensor channel after timeout
@@ -161,11 +165,7 @@ public class Compass extends Plugin implements MagnetometerListener{
 	 */
     
 	public void onData(MagnetometerData magData) {
-        // get the new orientation
-        float direction = magData.getDirectionFront();
         long timestamp = magData.getTimestamp();
-        
-        currentHeading = direction;
 
         // If values haven't been read for length of timeout,
         // turn off magnetometer sensor to save power
@@ -174,9 +174,33 @@ public class Compass extends Plugin implements MagnetometerListener{
 		}
 	}
     
-    public void unRegisterMagChannel(){
-        magChannel.close();
+    /**
+	 * Adds this listener to sensor channel.
+	 */
+	public void start() {
+        MagnetometerChannelConfig channelConfig = new MagnetometerChannelConfig();
+        channelConfig.setBackgroundMode(true);
+        magChannel = MagnetometerSensor.openChannel(Application.getApplication(),channelConfig);
+        magChannel.addMagnetometerListener(this);
+
+		Logger.log(this.getClass().getName() +": sensor listener added");
+
+		this.setStatus(STARTED);
+	}
+
+    /**
+     * Stops accelerometer listener and closes the sensor channel.
+     */
+    public void stop() {
+        // close the sensor channel
+        if (magChannel != null && magChannel.isOpen()) {
+            magChannel.close();
+            Logger.log(this.getClass().getName() +": sensor channel closed");
+        }
+
+        this.setStatus(STOPPED);
     }
+
     /**
      * Called when Plugin is destroyed.
      */
