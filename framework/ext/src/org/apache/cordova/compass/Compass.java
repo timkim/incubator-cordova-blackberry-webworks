@@ -56,6 +56,7 @@ public class Compass extends Plugin implements MagnetometerListener{
 			JSONObject heading = new JSONObject();
 			try {
                 this.registerMagChannel();
+                MagnetometerData data = magChannel.getData();
                 
 				heading.put("magneticHeading", currentHeading);
 				heading.put("trueHeading", currentHeading);
@@ -149,8 +150,8 @@ public class Compass extends Plugin implements MagnetometerListener{
 	 */
 	private void registerMagChannel() {
         // open channel
-        magChannel = MagnetometerSensor.openChannel( Application.getApplication() );
-        magChannel.addMagnetometerListener( this );
+        magChannel = MagnetometerSensor.openChannel(Application.getApplication());
+        magChannel.addMagnetometerListener(this);
 	}
 
 	/**
@@ -161,7 +162,7 @@ public class Compass extends Plugin implements MagnetometerListener{
     
 	public void onData(MagnetometerData magData) {
         // get the new orientation
-        float direction = magData.getHeading(0);
+        float direction = magData.getDirectionFront();
         long timestamp = magData.getTimestamp();
         
         currentHeading = direction;
