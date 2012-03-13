@@ -24,18 +24,19 @@ import org.apache.cordova.json4j.JSONArray;
 import org.apache.cordova.json4j.JSONException;
 import org.apache.cordova.json4j.JSONObject;
 import org.apache.cordova.util.Logger;
+import java.lang.IllegalStateException;
 
 import net.rim.device.api.system.MagnetometerData;
 import net.rim.device.api.system.MagnetometerListener;
 import net.rim.device.api.system.MagnetometerSensor;
 import net.rim.device.api.system.MagnetometerSensor.Channel;
 import net.rim.device.api.system.MagnetometerChannelConfig;
+import net.rim.device.api.system.MagnetometerCalibrationException;
 import net.rim.device.api.system.Application;
+import net.rim.device.api.ui.UiApplication;
 
 public class Compass extends Plugin implements MagnetometerListener{
     public static final String ACTION_GET_HEADING = "getHeading";
-    public static final String ACTION_SET_TIMEOUT = "setTimeout";
-    public static final String ACTION_GET_TIMEOUT = "getTimeout";
     public static final String ACTION_STOP = "stop";
     
     public static int STOPPED = 0;
@@ -46,7 +47,7 @@ public class Compass extends Plugin implements MagnetometerListener{
     public float timeout = 30000;
     long lastAccessTime;
     
-    public PluginResult execute(String action, JSONArray args, String calbackId){
+    public PluginResult execute(String action, JSONArray args, String calbackId) {
     
 		PluginResult result = null;
 		if (!MagnetometerSensor.isSupported()) {
@@ -54,32 +55,18 @@ public class Compass extends Plugin implements MagnetometerListener{
 		}
 		else if (ACTION_GET_HEADING.equals(action)) {
 			JSONObject heading = new JSONObject();
+           
 			try {
                 MagnetometerData data = getCurrentHeading();
-                
-				heading.put("magneticHeading", data.getDirectionFront());
-				heading.put("trueHeading", data.getDirectionFront());
+				heading.put("magneticHeading", data.getDirectionTop());
+				heading.put("trueHeading", data.getDirectionTop());
 				heading.put("headingAccuracy", 0);
 				heading.put("timestamp", data.getTimestamp());
 			} catch (JSONException e) {
 				return new PluginResult(PluginResult.Status.JSON_EXCEPTION, "JSONException:" + e.getMessage());
 			}
+            
 			result = new PluginResult(PluginResult.Status.OK, heading);
-		}
-		else if (ACTION_GET_TIMEOUT.equals(action)) {
-			float f = this.getTimeout();
-			return new PluginResult(PluginResult.Status.OK, Float.toString(f));
-		}
-		else if (ACTION_SET_TIMEOUT.equals(action)) {
-			try {
-				float t = Float.parseFloat(args.getString(0));
-				this.setTimeout(t);
-				return new PluginResult(PluginResult.Status.OK, "");
-			} catch (NumberFormatException e) {
-				return new PluginResult(PluginResult.Status.ERROR, e.getMessage());
-			} catch (JSONException e) {
-				return new PluginResult(PluginResult.Status.JSON_EXCEPTION, e.getMessage());
-			}
 		}
 		else if (ACTION_STOP.equals(action)) {
 			this.stop();
@@ -91,18 +78,6 @@ public class Compass extends Plugin implements MagnetometerListener{
 
 		return result;    
     }
-    
-
-	/**
-	 * Identifies if action to be executed returns a value and should be run synchronously.
-	 *
-	 * @param action	The action to execute
-	 * @return			T=returns value
-	 */
-
-	public boolean isSynch(String action) {
-		return true;
-	}
 
     /**
      * Get status of magnetometer sensor.
@@ -122,33 +97,13 @@ public class Compass extends Plugin implements MagnetometerListener{
 	private void setStatus(int status) {
 		this.status = status;
 	}
-
-	/**
-	 * Set the timeout to turn off magnetometer sensor.
-	 *
-	 * @param timeout		Timeout in msec.
-	 */
-
-	public void setTimeout(float timeout) {
-		this.timeout = timeout;
-	}
-
-	/**
-	 * Get the timeout to turn off magnetometer sensor.
-	 *
-	 * @return timeout in msec
-	 */
-   
-	public float getTimeout() {
-		return this.timeout;
-	}
     
     /**
 	 * Get the latest data from the Magnetometer sensor
 	 *
 	 * @return the MagnetometerData 
 	 */
-    private MagnetometerData getCurrentHeading(){
+    private MagnetometerData getCurrentHeading(){ 
 		// open sensor channel
 		if (this.getStatus() != STARTED) {
 			this.start();
@@ -162,6 +117,7 @@ public class Compass extends Plugin implements MagnetometerListener{
 
 		return data;
     }
+    
 	/**
 	 * Implements the MagnetometerListener method.  We listen for the purpose
 	 * of closing the application's Magnetometer sensor channel after timeout
@@ -181,12 +137,28 @@ public class Compass extends Plugin implements MagnetometerListener{
     /**
 	 * Starts the Magnetometer channel to get data. Set to background mode to get the raw data
 	 */
-	public void start() {
+	public void start(){
         MagnetometerChannelConfig channelConfig = new MagnetometerChannelConfig();
         channelConfig.setBackgroundMode(true);
         magChannel = MagnetometerSensor.openChannel(Application.getApplication(),channelConfig);
         magChannel.addMagnetometerListener(this);
 
+        // can't figure this out at the moment
+        /*
+        Thread t = new Thread(new Runnable() {
+            public void run() {
+                try{
+                    magChannel.startCalibration();
+                }catch(MagnetometerCalibrationException e){
+                    Logger.log("MagnetometerCalibrationException:" + e.getMessage());
+                } catch(IllegalStateException e){
+                    Logger.log("IllegalStateException:" + e.getMessage());
+                }
+            }
+        });
+        t.start(); 
+        */
+        
 		Logger.log(this.getClass().getName() +": sensor listener added");
 
 		this.setStatus(STARTED);
