@@ -144,11 +144,13 @@ public class Compass extends Plugin implements MagnetometerListener{
         magChannel.addMagnetometerListener(this);
 
         // can't figure this out at the moment
-        /*
+        
         Thread t = new Thread(new Runnable() {
             public void run() {
                 try{
-                    magChannel.startCalibration();
+                	synchronized(UiApplication.getEventLock()) {
+                    	magChannel.startCalibration();
+                    }
                 }catch(MagnetometerCalibrationException e){
                     Logger.log("MagnetometerCalibrationException:" + e.getMessage());
                 } catch(IllegalStateException e){
@@ -157,7 +159,7 @@ public class Compass extends Plugin implements MagnetometerListener{
             }
         });
         t.start(); 
-        */
+        
         
 		Logger.log(this.getClass().getName() +": sensor listener added");
 
