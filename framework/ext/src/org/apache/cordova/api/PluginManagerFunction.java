@@ -228,6 +228,17 @@ public class PluginManagerFunction extends ScriptableFunction {
     }
 
     /**
+     * Called when application is reset.
+     */
+    public void onReset(){
+        Enumeration e = this.plugins.elements();
+        while (e.hasMoreElements()) {
+            Plugin plugin = (Plugin)e.nextElement();
+            plugin.onReset();
+        }        
+    }
+    
+    /**
      * Called when application is destroyed.
      */
     public void onDestroy() {

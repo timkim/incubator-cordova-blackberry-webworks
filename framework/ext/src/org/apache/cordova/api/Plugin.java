@@ -73,6 +73,12 @@ public abstract class Plugin implements IPlugin {
     }
 
     /**
+     * Called when Plugin is reset.
+     */
+    public void onReset(){
+    }
+    
+    /**
      * Called when Plugin is destroyed.
      */
     public void onDestroy() {
